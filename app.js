@@ -36,11 +36,14 @@ function download(name, content, mime){
   URL.revokeObjectURL(url);
 }
 function setStatus(msg, level=''){
-  el('status').textContent = msg;
-  el('status').className = `pill ${level||''}`;
+  const s = el('status');
+  if (!s) return;
+  s.textContent = msg;
+  s.className = `pill ${level||''}`;
 }
 const toast = el('toast');
 function showToast(msg){
+  if (!toast) return;
   toast.textContent = msg;
   toast.style.display = 'block';
   clearTimeout(showToast._t);
@@ -49,6 +52,7 @@ function showToast(msg){
 
 // ====== Table helpers ======
 function render2DTable(container, data){
+  if(!container) return;
   if(!data?.length){
     container.innerHTML = '<span class="hint">No data.</span>';
     return;
@@ -66,6 +70,7 @@ function render2DTable(container, data){
   ].join('');
 }
 function pointsToTable(container, coords){
+  if(!container) return;
   if(!coords?.length){
     container.innerHTML = '<span class="hint">No points.</span>';
     return;
@@ -94,8 +99,26 @@ function sheetTo2D(ws){
 // ====== XLSX load & STAPD ======
 async function loadWorkbookFromAppFolder(){
   try{
-    const res = await fetch('Safety Fan Calculator.xlsx');
-    if(!res.ok) throw new Error('Workbook not found in app folder');
+    console.log('Path:', location.pathname);
+    const bust = `?_=${Date.now()}`;
+    const candidates = [
+      'Safety Fan Calculator.xlsx',
+      'Safety%20Fan%20Calculator.xlsx',
+      './Safety Fan Calculator.xlsx',
+      './Safety%20Fan%20Calculator.xlsx',
+      'data/SafetyFanCalculator.xlsx',
+      './data/SafetyFanCalculator.xlsx'
+    ].map(p => `${p}${bust}`);
+
+    let res;
+    for (const url of candidates) {
+      try {
+        res = await fetch(url, { cache: 'no-store' });
+        if (res.ok) { console.log('Workbook loaded from', url); break; }
+      } catch (_) {}
+    }
+    if (!res || !res.ok) throw new Error('Workbook not found. Ensure the file exists (exact case) or add data/SafetyFanCalculator.xlsx');
+
     const buf = await res.arrayBuffer();
     WB = XLSX.read(buf, { type:'array' });
     xlsxSheetNames = WB.SheetNames.slice();
@@ -108,6 +131,7 @@ async function loadWorkbookFromAppFolder(){
 
     setStatus(`Loaded workbook: ${previewName}`, 'ok');
   }catch(err){
+    console.error(err);
     setStatus(`Failed to auto-load workbook: ${err.message}`, 'bad');
   }
 }
@@ -226,16 +250,17 @@ function featureFromFan(coords){
 const page1 = document.getElementById('page1');
 const page2 = document.getElementById('page2');
 function goPage(id){
+  if (!page1 || !page2) return;
   page1.style.display = id==='page1' ? 'block' : 'none';
   page2.style.display = id==='page2' ? 'block' : 'none';
 }
-el('goResults').addEventListener('click', ()=>{
+el('goResults')?.addEventListener('click', ()=>{
   if(!el('lat').value || !el('lon').value) return showToast('Enter BC grid (Lat/Lon) first');
   goPage('page2');
   buildReview();
 });
-el('btnBackToInputs').addEventListener('click', ()=> goPage('page1'));
-el('btnToggleTraj').addEventListener('click', ()=>{
+el('btnBackToInputs')?.addEventListener('click', ()=> goPage('page1'));
+el('btnToggleTraj')?.addEventListener('click', ()=>{
   mode = (mode === 'LA' ? 'HA' : 'LA');
   showToast(`Trajectory: ${mode}`);
   buildReview();
@@ -243,6 +268,8 @@ el('btnToggleTraj').addEventListener('click', ()=>{
 
 // ====== Review (page 2) ======
 function buildReview(){
+  const r = el('review');
+  if (!r) return;
   const pairs = [
     ['Lat', el('lat').value],['Lon', el('lon').value],['Az', el('az').value],
     ['Left', el('leftOff').value],['Right', el('rightOff').value],['MaxR', el('fanDepth').value],
@@ -252,12 +279,12 @@ function buildReview(){
     ['Temp', el('temp').value],['Press', el('press').value],
     ['WindFrom', el('windDir').value],['WindSpd', el('windSpd').value],['MetScale', el('metScale').value]
   ];
-  el('review').innerHTML =
+  r.innerHTML =
     `<table><tbody>${pairs.map(([k,v])=>`<tr><th style="text-align:left">${k}</th><td>${v}</td></tr>`).join('')}</tbody></table>`;
 }
 
 // ====== Compute & export ======
-el('btnCompute').addEventListener('click', ()=>{
+el('btnCompute')?.addEventListener('click', ()=>{
   const lat = parseFloat(el('lat').value);
   const lon = parseFloat(el('lon').value);
   const az = parseFloat(el('az').value);
@@ -282,11 +309,11 @@ el('btnCompute').addEventListener('click', ()=>{
   setStatus(`Computed fan: ${poly.length} pts (mode: ${mode})`, 'ok');
 });
 
-el('btnExportGeoJSON').addEventListener('click', ()=>{
+el('btnExportGeoJSON')?.addEventListener('click', ()=>{
   if(!fanGeoJSON) return setStatus('Compute first','bad');
   download('safety_fan.geojson', JSON.stringify(fanGeoJSON), 'application/geo+json');
 });
-el('btnExportKML').addEventListener('click', ()=>{
+el('btnExportKML')?.addEventListener('click', ()=>{
   if(!fanGeoJSON) return setStatus('Compute first','bad');
   const coords = fanGeoJSON.features[0].geometry.coordinates[0]
     .map(([lon,lat]) => `${lon},${lat},0`).join(' ');
@@ -298,7 +325,7 @@ el('btnExportKML').addEventListener('click', ()=>{
   download('safety_fan.kml', kml, 'application/vnd.google-earth.kml+xml');
 });
 
-el('btnSaveXLSX').addEventListener('click', ()=>{
+el('btnSaveXLSX')?.addEventListener('click', ()=>{
   if(!WB){ return setStatus('No workbook loaded','bad'); }
   const rows = [
     ['OPTECH GUNNER APP export'],
@@ -328,7 +355,7 @@ el('btnSaveXLSX').addEventListener('click', ()=>{
 });
 
 // ====== FP picker (Leaflet) ======
-const fpIcon = L.icon({
+const fpIcon = L && L.icon ? L.icon({
   iconUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="32" height="48" viewBox="0 0 32 48">
     <defs><filter id="s" x="-50%" y="-50%" width="200%" height="200%">
@@ -341,18 +368,18 @@ const fpIcon = L.icon({
   iconSize: [32,48],
   iconAnchor: [16,47],
   popupAnchor: [0,-40],
-});
+}) : null;
 
 function initFpMap(){
-  if (fpMap) return;
-  const lat0 = parseFloat(el('lat').value) || 0;
-  const lon0 = parseFloat(el('lon').value) || 0;
+  if (fpMap || !window.L) return;
+  const lat0 = parseFloat(el('lat')?.value) || 0;
+  const lon0 = parseFloat(el('lon')?.value) || 0;
 
   fpMap = L.map('fpMap').setView([lat0, lon0], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     { attribution: '© OpenStreetMap' }).addTo(fpMap);
 
-  fpMarker = L.marker([lat0, lon0], { draggable: true, icon: fpIcon }).addTo(fpMap)
+  fpMarker = L.marker([lat0, lon0], { draggable: true, icon: fpIcon || undefined }).addTo(fpMap)
     .bindPopup('Firing Point');
 
   fpMarker.on('dragend', () => {
@@ -438,11 +465,11 @@ el('btnWeather')?.addEventListener('click', async ()=>{
     if(c.wind_speed_10m!=null) el('windSpd').value = c.wind_speed_10m;        // m/s
     if(c.wind_direction_10m!=null) el('windDir').value = c.wind_direction_10m;// deg
     showToast('Weather synced from current Lat/Lon');
-  }catch(e){ setStatus('Weather sync failed', 'bad'); }
+  }catch(e){ console.error(e); setStatus('Weather sync failed', 'bad'); }
 });
 
 // ====== Other wiring ======
-el('btnReload').addEventListener('click', loadWorkbookFromAppFolder);
+el('btnReload')?.addEventListener('click', loadWorkbookFromAppFolder);
 el('search')?.addEventListener('input', ()=>render2DTable(el('tableWrap'), ballisticCSV));
 
 // Boot
