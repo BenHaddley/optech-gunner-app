@@ -7,9 +7,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css">
 
-  <!-- Leaflet (map picker) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
 
   <!-- SheetJS for XLSX read/write -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -21,78 +30,104 @@
 
     <div class="controls">
       <button id="btnReload" class="secondary">Reload workbook</button>
-      <button id="btnWeather" class="secondary">🌦 Sync weather</button>
       <button id="btnExportGeoJSON" class="secondary">GeoJSON</button>
       <button id="btnExportKML" class="secondary">KML</button>
       <button id="btnSaveXLSX" class="secondary">Export updated XLSX</button>
       <span id="status" class="pill">Booting…</span>
     </div>
 
-    <div class="progress" id="progressDots"></div>
+    <!-- Page 1: Inputs -->
+    <section id="page1" class="card">
+      <h2>Page 1 — Inputs</h2>
 
-    <!-- STEP 1 -->
-    <section class="card step" data-step="0">
-      <h2>Step 1: Firing Point</h2>
+      <!-- Map picker row -->
+      <div class="fields">
+        <div style="grid-column: 1 / -1;">
+          <div id="fpMap" style="width:100%; height:240px; border-radius:12px; box-shadow:0 1px 3px #0002;"></div>
+          <div class="group" style="margin-top:.5rem;">
+            <button id="btnUseMyLocation" class="secondary">📍 Use my location</button>
+            <button id="btnPickOnMap" class="secondary">🧭 Pick on map</button>
+            <button id="btnPreviewOnMap" class="secondary">👀 Preview on map</button>
+          </div>
+        </div>
+      </div>
+
       <div class="fields">
         <div>
-          <label>Lat (°)
+          <label>BC Grid — Lat (°)
             <input id="lat" inputmode="decimal" type="number" step="0.000001" value="-40.383000">
-          </label><div class="hint">Your position</div>
+          </label>
+          <div class="hint">Firing point latitude</div>
         </div>
         <div>
-          <label>Lon (°)
+          <label>BC Grid — Lon (°)
             <input id="lon" inputmode="decimal" type="number" step="0.000001" value="175.613000">
           </label>
+          <div class="hint">Firing point longitude</div>
         </div>
-        <div>
-          <label>Azimuth (°)
-            <input id="az" inputmode="decimal" type="number" step="0.1" value="90">
-          </label><div class="hint">Direction of fire</div>
-        </div>
-        <div>
-          <label>Left Limit (°)
-            <input id="leftOff" inputmode="decimal" type="number" step="0.1" value="30">
-          </label>
-        </div>
-        <div>
-          <label>Right Limit (°)
-            <input id="rightOff" inputmode="decimal" type="number" step="0.1" value="30">
-          </label>
-        </div>
-        <div>
-          <label>Max Range (m)
-            <input id="fanDepth" inputmode="numeric" type="number" step="1" value="6000">
-          </label>
-        </div>
-      </div>
 
-      <!-- Map picker controls -->
-      <div class="controls" style="margin-top:8px;">
-        <button id="btnPickOnMap" class="secondary">📍 Pick on map</button>
-        <button id="btnPreviewOnMap" class="secondary">👀 Preview inputs on map</button>
-        <button id="btnUseMyLocation" class="secondary">📡 Use my location</button>
-      </div>
-
-      <!-- Step 1 map -->
-      <div id="fpMap" class="map-frame" style="height:320px; margin-top:8px;"></div>
-    </section>
-
-    <!-- STEP 2 -->
-    <section class="card step" data-step="1">
-      <h2>Step 2: Selection (STAPD)</h2>
-      <div class="fields">
         <div>
-          <label>Weapon
+          <label>STAPD (Weapon)
             <select id="weapon">
               <option value="">Auto (use Nature + Charge)</option>
             </select>
           </label>
         </div>
-        <div><label>Nature<select id="nature"><option>HE</option><option>IM</option></select></label></div>
-        <div><label>Charge<select id="charge"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></label></div>
-        <div><label>Mode<select id="mode"><option value="LA">L/A</option><option value="HA">H/A</option></select></label></div>
-        <div><label>Nominal Range (m)<input id="range" inputmode="numeric" type="number" step="1" value="4000"></label></div>
-        <div><label>Tabulated QE<input id="qe" inputmode="numeric" type="number" step="0.1" value="800"></label></div>
+
+        <div>
+          <label>Nature
+            <select id="nature">
+              <option>HE</option>
+              <option>IM</option>
+            </select>
+          </label>
+        </div>
+
+        <div>
+          <label>Charge
+            <select id="charge">
+              <option>1</option><option>2</option><option>3</option>
+              <option>4</option><option>5</option><option>6</option><option>7</option>
+            </select>
+          </label>
+        </div>
+
+        <div>
+          <label>Azimuth (°)
+            <input id="az" inputmode="decimal" type="number" step="0.1" value="90">
+          </label>
+          <div class="hint">Direction of fire</div>
+        </div>
+
+        <div>
+          <label>Left Limit (°)
+            <input id="leftOff" inputmode="decimal" type="number" step="0.1" value="30">
+          </label>
+        </div>
+
+        <div>
+          <label>Right Limit (°)
+            <input id="rightOff" inputmode="decimal" type="number" step="0.1" value="30">
+          </label>
+        </div>
+
+        <div>
+          <label>Max Range (m)
+            <input id="fanDepth" inputmode="numeric" type="number" step="1" value="6000">
+          </label>
+        </div>
+
+        <div>
+          <label>Nominal Range (m)
+            <input id="range" inputmode="numeric" type="number" step="1" value="4000">
+          </label>
+        </div>
+
+        <div>
+          <label>Tabulated QE
+            <input id="qe" inputmode="numeric" type="number" step="0.1" value="800">
+          </label>
+        </div>
       </div>
 
       <details class="data-preview">
@@ -100,36 +135,44 @@
         <input id="search" class="search" placeholder="Filter…">
         <div id="tableWrap" class="tableWrap"></div>
       </details>
+
+      <div class="footer-actions">
+        <button id="btnWeather" class="secondary">🌦 Sync with weather</button>
+        <button id="goResults" class="primary">Continue to Results ▶</button>
+      </div>
     </section>
 
-    <!-- STEP 3 -->
-    <section class="card step" data-step="2">
-      <h2>Step 3: Met (STAMET)</h2>
-      <div class="fields">
-        <div><label>Temp (°C)<input id="temp" inputmode="decimal" type="number" step="0.1" value="15"></label></div>
+    <!-- Page 2: Results -->
+    <section id="page2" class="card" style="display:none">
+      <h2>Page 2 — Results</h2>
+
+      <div class="fields compact">
+        <div><label>Met Temp (°C)<input id="temp" inputmode="decimal" type="number" step="0.1" value="15"></label></div>
         <div><label>Pressure (hPa)<input id="press" inputmode="decimal" type="number" step="0.1" value="1013.25"></label></div>
         <div><label>Wind From (°)<input id="windDir" inputmode="decimal" type="number" step="0.1" value="270"></label></div>
         <div><label>Wind Speed (m/s)<input id="windSpd" inputmode="decimal" type="number" step="0.1" value="5"></label></div>
         <div><label>Met Scale (0–1)<input id="metScale" inputmode="decimal" type="number" step="0.05" value="0.2"></label></div>
         <div><label>Correction Preview<input id="metPreview" disabled value="ΔRange: 0 m, ΔBearing: 0°"></label></div>
       </div>
-    </section>
 
-    <!-- STEP 4 -->
-    <section class="card step" data-step="3">
-      <h2>Step 4: Review & Compute</h2>
-      <div id="review"></div>
-      <details><summary>Debug</summary><pre id="debug"></pre></details>
-    </section>
-  </div>
+      <div class="group">
+        <button id="btnToggleTraj" class="secondary">Toggle Trajectory (LA/HA)</button>
+        <button id="btnBackToInputs" class="secondary">◀ Change inputs</button>
+        <button id="btnCompute" class="primary">Compute Fan</button>
+      </div>
 
-  <!-- sticky bottom nav -->
-  <div class="stickybar">
-    <div class="group">
-      <button id="btnBack" class="secondary">◀ Back</button>
-      <button id="btnNext" class="secondary">Next ▶</button>
-    </div>
-    <button id="btnCompute" class="primary">Compute Fan</button>
+      <div id="review" class="mt"></div>
+
+      <details class="mt">
+        <summary>Computed fan points (lon, lat)</summary>
+        <div id="pointsWrap" class="tableWrap"></div>
+      </details>
+
+      <details class="mt">
+        <summary>Debug</summary>
+        <pre id="debug"></pre>
+      </details>
+    </section>
   </div>
 
   <div id="toast" class="toast"></div>
