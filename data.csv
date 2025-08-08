@@ -1,0 +1,6 @@
+@"
+Name,Rank,Duty
+John Smith,Corporal,Logistics
+Sarah Lee,Sergeant,Comms
+Ben Haddley,Private,Intel
+"@ | Set-Content -Encoding UTF8 "$folder\data.csv"

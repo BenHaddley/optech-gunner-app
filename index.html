@@ -1,0 +1,137 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OPTECH GUNNER APP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css">
+
+  <!-- Leaflet (map picker) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- SheetJS for XLSX read/write -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="title">OPTECH GUNNER APP</h1>
+
+    <div class="controls">
+      <button id="btnReload" class="secondary">Reload workbook</button>
+      <button id="btnWeather" class="secondary">🌦 Sync weather</button>
+      <button id="btnExportGeoJSON" class="secondary">GeoJSON</button>
+      <button id="btnExportKML" class="secondary">KML</button>
+      <button id="btnSaveXLSX" class="secondary">Export updated XLSX</button>
+      <span id="status" class="pill">Booting…</span>
+    </div>
+
+    <div class="progress" id="progressDots"></div>
+
+    <!-- STEP 1 -->
+    <section class="card step" data-step="0">
+      <h2>Step 1: Firing Point</h2>
+      <div class="fields">
+        <div>
+          <label>Lat (°)
+            <input id="lat" inputmode="decimal" type="number" step="0.000001" value="-40.383000">
+          </label><div class="hint">Your position</div>
+        </div>
+        <div>
+          <label>Lon (°)
+            <input id="lon" inputmode="decimal" type="number" step="0.000001" value="175.613000">
+          </label>
+        </div>
+        <div>
+          <label>Azimuth (°)
+            <input id="az" inputmode="decimal" type="number" step="0.1" value="90">
+          </label><div class="hint">Direction of fire</div>
+        </div>
+        <div>
+          <label>Left Limit (°)
+            <input id="leftOff" inputmode="decimal" type="number" step="0.1" value="30">
+          </label>
+        </div>
+        <div>
+          <label>Right Limit (°)
+            <input id="rightOff" inputmode="decimal" type="number" step="0.1" value="30">
+          </label>
+        </div>
+        <div>
+          <label>Max Range (m)
+            <input id="fanDepth" inputmode="numeric" type="number" step="1" value="6000">
+          </label>
+        </div>
+      </div>
+
+      <!-- Map picker controls -->
+      <div class="controls" style="margin-top:8px;">
+        <button id="btnPickOnMap" class="secondary">📍 Pick on map</button>
+        <button id="btnPreviewOnMap" class="secondary">👀 Preview inputs on map</button>
+        <button id="btnUseMyLocation" class="secondary">📡 Use my location</button>
+      </div>
+
+      <!-- Step 1 map -->
+      <div id="fpMap" class="map-frame" style="height:320px; margin-top:8px;"></div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="card step" data-step="1">
+      <h2>Step 2: Selection (STAPD)</h2>
+      <div class="fields">
+        <div>
+          <label>Weapon
+            <select id="weapon">
+              <option value="">Auto (use Nature + Charge)</option>
+            </select>
+          </label>
+        </div>
+        <div><label>Nature<select id="nature"><option>HE</option><option>IM</option></select></label></div>
+        <div><label>Charge<select id="charge"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></label></div>
+        <div><label>Mode<select id="mode"><option value="LA">L/A</option><option value="HA">H/A</option></select></label></div>
+        <div><label>Nominal Range (m)<input id="range" inputmode="numeric" type="number" step="1" value="4000"></label></div>
+        <div><label>Tabulated QE<input id="qe" inputmode="numeric" type="number" step="0.1" value="800"></label></div>
+      </div>
+
+      <details class="data-preview">
+        <summary>Ballistic table preview</summary>
+        <input id="search" class="search" placeholder="Filter…">
+        <div id="tableWrap" class="tableWrap"></div>
+      </details>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="card step" data-step="2">
+      <h2>Step 3: Met (STAMET)</h2>
+      <div class="fields">
+        <div><label>Temp (°C)<input id="temp" inputmode="decimal" type="number" step="0.1" value="15"></label></div>
+        <div><label>Pressure (hPa)<input id="press" inputmode="decimal" type="number" step="0.1" value="1013.25"></label></div>
+        <div><label>Wind From (°)<input id="windDir" inputmode="decimal" type="number" step="0.1" value="270"></label></div>
+        <div><label>Wind Speed (m/s)<input id="windSpd" inputmode="decimal" type="number" step="0.1" value="5"></label></div>
+        <div><label>Met Scale (0–1)<input id="metScale" inputmode="decimal" type="number" step="0.05" value="0.2"></label></div>
+        <div><label>Correction Preview<input id="metPreview" disabled value="ΔRange: 0 m, ΔBearing: 0°"></label></div>
+      </div>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="card step" data-step="3">
+      <h2>Step 4: Review & Compute</h2>
+      <div id="review"></div>
+      <details><summary>Debug</summary><pre id="debug"></pre></details>
+    </section>
+  </div>
+
+  <!-- sticky bottom nav -->
+  <div class="stickybar">
+    <div class="group">
+      <button id="btnBack" class="secondary">◀ Back</button>
+      <button id="btnNext" class="secondary">Next ▶</button>
+    </div>
+    <button id="btnCompute" class="primary">Compute Fan</button>
+  </div>
+
+  <div id="toast" class="toast"></div>
+</body>
+</html>
